@@ -14,17 +14,21 @@ type Page struct {
 }
 
 func (p *Page) save() error {
-	filename := "data/" + p.Title + ".txt"
+	filename := createFilePath(p.Title)
 	return os.WriteFile(filename, p.Body, 0600)
 }
 
 func loadPage(title string) (*Page,error) {
-	filename := "data/" + title + ".txt"
+	filename := createFilePath(title)
 	body,err := os.ReadFile(filename)
 	if err != nil {
 		return nil,err
 	}
 	return &Page{Title: title, Body: body},nil
+}
+
+func createFilePath(title string) string {
+	return "data/" + title + ".txt"
 }
 
 var templates = template.Must(template.ParseFiles("tmpl/edit.html", "tmpl/view.html"))
