@@ -9,8 +9,6 @@ import (
 	"regexp"
 )
 
-var templates = template.Must(template.ParseFiles("edit.html", "view.html"))
-
 type Page struct {
 	Title string
 	Body  []byte
@@ -29,6 +27,8 @@ func loadPage(title string) (*Page,error) {
 	}
 	return &Page{Title: title, Body: body},nil
 }
+
+var templates = template.Must(template.ParseFiles("edit.html", "view.html"))
 
 func renderTemplate(w http.ResponseWriter, tmpl string, p *Page){
 	err := templates.ExecuteTemplate(w, tmpl+".html", p)
