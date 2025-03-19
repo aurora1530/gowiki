@@ -41,7 +41,8 @@ func editHandler(w http.ResponseWriter, r *http.Request){
 	title := r.URL.Path[len("/edit/"):]
 	p,err := loadPage(title)
 	if err != nil {
-		p = &Page{Title: title}
+		http.Redirect(w, r, "/edit/"+title, http.StatusFound)
+		return
 	}
 	renderTemplate(w, "edit", p)
 }
