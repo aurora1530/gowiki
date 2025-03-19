@@ -6,7 +6,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
+	"strings"
 	"text/template/parse"
 )
 
@@ -54,7 +56,7 @@ func renderTemplateByLayout(w http.ResponseWriter, l Layout, tmplTree *parse.Tre
 	}
 }
 
-var templates = template.Must(template.ParseFiles("tmpl/edit.html", "tmpl/view.html"))
+var templates = template.Must(template.ParseFiles("tmpl/edit.html", "tmpl/view.html", "tmpl/list.html"))
 
 func renderTemplate(w http.ResponseWriter, tmpl string, p *Page) {
 	l := Layout{
@@ -94,6 +96,52 @@ func saveHandler(w http.ResponseWriter, r *http.Request, title string) {
 	http.Redirect(w, r, "/view/"+title, http.StatusFound)
 }
 
+func listHandler(w http.ResponseWriter, r *http.Request) {
+	dirs, err := os.ReadDir("data")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	pages := make([]Page, 0, len(dirs))
+
+	for _, d := range dirs {
+		if d.IsDir() {
+			continue
+		}
+
+		info, err := d.Info()
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+
+		fName := info.Name()
+
+		if fName == ".gitkeep" {
+			continue
+		}
+
+		title := strings.TrimSuffix(fName, filepath.Ext(fName))
+		p, err := loadPage(title)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		pages = append(pages, *p)
+	}
+
+	l := Layout{
+		Title: "List",
+		ChildArgs: struct {
+			Pages []Page
+		}{Pages: pages},
+	}
+
+	t := templates.Lookup("list.html").Tree
+	renderTemplateByLayout(w, l, t)
+}
+
 var validPath = regexp.MustCompile("^/(edit|save|view)/([a-zA-Z0-9]+)$")
 
 func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
@@ -116,5 +164,6 @@ func main() {
 	http.HandleFunc("/view/", makeHandler(viewHandler))
 	http.HandleFunc("/edit/", makeHandler(editHandler))
 	http.HandleFunc("/save/", makeHandler(saveHandler))
+	http.HandleFunc("/list", listHandler)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

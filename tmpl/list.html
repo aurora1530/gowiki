@@ -1,0 +1,7 @@
+<div>
+  {{ range .Pages}}
+    <h4>Title: {{ .Title }}</h4>
+    <a href="/view/{{ .Title }}">View</a>
+    <a href="/edit/{{ .Title }}">Edit</a>
+  {{ end }}
+</div>
