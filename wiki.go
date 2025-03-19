@@ -1,11 +1,13 @@
 package main
 
 import (
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
 	"os"
 	"regexp"
+	"text/template/parse"
 )
 
 type Page struct {
@@ -31,14 +33,37 @@ func createFilePath(title string) string {
 	return "data/" + title + ".txt"
 }
 
-var templates = template.Must(template.ParseFiles("tmpl/edit.html", "tmpl/view.html"))
+type Layout struct {
+	Title     string
+	ChildArgs any
+}
 
-func renderTemplate(w http.ResponseWriter, tmpl string, p *Page) {
-	err := templates.ExecuteTemplate(w, tmpl+".html", p)
+var layoutTemplate = template.Must(template.ParseFiles("tmpl/layout.html"))
+
+func renderTemplateByLayout(w http.ResponseWriter, l Layout, tmplTree *parse.Tree) {
+	t, err := template.Must(layoutTemplate.Clone()).AddParseTree("main", tmplTree)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	err = t.ExecuteTemplate(w, "layout.html", l)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+var templates = template.Must(template.ParseFiles("tmpl/edit.html", "tmpl/view.html"))
+
+func renderTemplate(w http.ResponseWriter, tmpl string, p *Page) {
+	l := Layout{
+		Title:     fmt.Sprintf("%s: %s", tmpl, p.Title),
+		ChildArgs: p,
+	}
+
+	t := templates.Lookup(tmpl + ".html").Tree
+	renderTemplateByLayout(w, l, t)
 }
 
 func viewHandler(w http.ResponseWriter, r *http.Request, title string) {
